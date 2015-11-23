@@ -5,7 +5,34 @@ use 5.020;
 package Database::Server::MySQL {
 
   # ABSTRACT: Interface for MySQL server instance
-  # VERSION
+
+=head1 SYNOPSIS
+
+ use Database::Server::MySQL->new(
+   data     => '/tmp/mysqlroot/data',
+   pid_file => '/tmp/mysqlroot/mysql.pid',
+ );
+ 
+ $server->create;
+ $server->start;
+ $server->stop;
+ 
+ if($server->is_up)
+ {
+   say "server is up";
+ }
+ else
+ {
+   say "server is down";
+ }
+
+=head1 DESCRIPTION
+
+This class provides a simple interface for creating,
+starting and stopping MySQL instances.  It should also
+work with MariaDB and other compatible forks.
+
+=cut
 
   use Moose;
   use MooseX::Types::Path::Class qw( File Dir );
@@ -45,7 +72,50 @@ package Database::Server::MySQL {
       scalar which('mysqld_safe') // croak "unable to find mysqld_safe";
     },
   );
+
+=head1 ATTRIBUTES
+
+=head2 data
+
+ my $dir = $server->data;
+
+The data directory root for the server.  This
+attribute is required.
+
+=cut
   
+  has data => (
+    is       => 'ro',
+    isa      => Dir,
+    coerce   => 1,
+    required => 1,
+  );
+
+=head2 pid_file
+
+ my $file = $server->pid_file
+
+The PID file for the server.  This attribute
+is required.
+
+=cut
+
+  has pid_file => (
+    is       => 'ro',
+    isa      => File,
+    coerce   => 1,
+    required => 1,
+  );
+
+=head2 user
+
+ my $user = $server->user;
+
+The user the server will run under.  The default is
+the user that is running the Perl process.
+
+=cut
+
   has user => (
     is      => 'ro',
     isa     => 'Str',
@@ -55,30 +125,41 @@ package Database::Server::MySQL {
     },
   );
 
-  has data => (
-    is       => 'ro',
-    isa      => Dir,
-    coerce   => 1,
-    required => 1,
-  );
+=head2 port
 
-  has pid_file => (
-    is       => 'ro',
-    isa      => File,
-    coerce   => 1,
-    required => 1,
-  );
+ my $port = $server->port;
+
+The TCP port to listen to connections on.
+
+=cut
 
   has port => (
     is  => 'ro',
     isa => 'Int',
   );
-  
+
+=head2 socket
+
+ my $sock = $server->socket;
+
+The path to the UNIX domain socket.
+
+=cut
+
   has socket => (
     is => 'ro',
     isa => File,
   );
-  
+
+=head2 log_error
+
+ my $log = $server->log_error;
+
+The error log file path.  If not provided then
+errors will be sent to syslog.
+
+=cut
+
   has log_error => (
     is       => 'ro',
     isa      => File,
@@ -90,6 +171,14 @@ package Database::Server::MySQL {
     my($self, @command) = @_;
     Database::Server::MySQL::CommandResult->new(@command);
   }
+
+=head1 METHODS
+
+=head2 create
+
+ $server->create;
+
+=cut
   
   sub create
   {
@@ -109,21 +198,19 @@ package Database::Server::MySQL {
     }
   }
   
-  sub is_up
-  {
-    my($self) = @_;
-    return '' unless -r $self->pid_file;
-    my($pid) = $self->pid_file->slurp;
-    chomp $pid;
-    # FIXME: only works with /proc fs
-    !!-e "/proc/$pid";
-  }
-  
   sub _result
   {
     shift;
     Database::Server::MySQL::InternalResult->new(@_);
   }
+
+=head2 start
+
+ $server->start;
+
+Starts the MySQL database instance.
+
+=cut
   
   sub start
   {
@@ -157,6 +244,14 @@ package Database::Server::MySQL {
     $self->is_up ? $self->_result('' => 1) : $self->('server did not start');
   }
   
+=head2 stop
+
+ $server->stop;
+
+Stops the MySQL database instance.
+
+=cut
+
   sub stop
   {
     my($self) = @_;
@@ -177,6 +272,23 @@ package Database::Server::MySQL {
     
   }
 
+=head2 is_up
+
+ my $bool = $server->is_up;
+
+Checks to see if the MySQL database instance is up.
+
+=cut
+
+  sub is_up
+  {
+    my($self) = @_;
+    return '' unless -r $self->pid_file;
+    my($pid) = $self->pid_file->slurp;
+    chomp $pid;
+    !!-e "/proc/$pid";
+  }
+  
 }
 
 package Database::Server::MySQL::Result {
