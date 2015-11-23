@@ -83,12 +83,6 @@ package Database::Server::MySQL {
     is       => 'ro',
     isa      => File,
     coerce   => 1,
-    required => 1,
-  );
-  
-  has syslog  => (
-    is      => 'ro',
-    default => 0,
   );
   
   sub _run
@@ -145,12 +139,11 @@ package Database::Server::MySQL {
       open STDOUT, '>', '/dev/null';
       open STDERR, '>', '/dev/null';
       exec($self->mysqld_safe,
-                          '--datadir='   . $self->data,
-                          '--pid-file='  . $self->pid_file,
-                          '--log_error=' . $self->log_error,
-        !$self->syslog ? ('--skip-syslog')                       : (),
-        $self->port    ? ('--port='      . $self->port)          : (),
-        $self->socket  ? ('--socket='    . $self->socket)        : (),
+                             '--datadir='   . $self->data,
+                             '--pid-file='  . $self->pid_file,
+        $self->log_error ? ( '--log_error=' . $self->log_error )    : ('--syslog'),
+        $self->port    ?   ( '--port='      . $self->port )         : (),
+        $self->socket  ?   ( '--socket='    . $self->socket )       : (),
       );
       exit 2;
     }
