@@ -179,6 +179,10 @@ errors will be sent to syslog.
 
  $server->create;
 
+Create the MySQL instance.  This involves calling C<mysqld --initalize> or
+C<mysql_install_db> with the appropriate options to produce the data files
+necessary for running the MySQL server instance.
+
 =cut
   
   sub create
