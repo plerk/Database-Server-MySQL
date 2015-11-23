@@ -1,0 +1,8 @@
+Capture::Tiny
+ExtUtils::MakeMaker
+File::Which
+Moose
+MooseX::Types::Path::Class
+Path::Class
+Test::More
+namespace::autoclean

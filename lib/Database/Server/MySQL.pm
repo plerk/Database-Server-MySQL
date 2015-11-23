@@ -8,7 +8,8 @@ package Database::Server::MySQL {
 
 =head1 SYNOPSIS
 
- use Database::Server::MySQL->new(
+ use Database::Server::MySQL;
+ my $server = Database::Server::MySQL->new(
    data     => '/tmp/mysqlroot/data',
    pid_file => '/tmp/mysqlroot/mysql.pid',
  );
