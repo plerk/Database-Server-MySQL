@@ -41,6 +41,13 @@ work with MariaDB and other compatible forks.
   use Carp qw( croak );
   use namespace::autoclean;
 
+  # TODO: my version of Debian comes with a MySQL old
+  # enough that you have to use this deprecated
+  # interface for creating MySQL data files.  This
+  # has to be able to handle which() returning new
+  # or L</create> below needs to check the server
+  # version.  First though we need a working modern
+  # version of MySQL to test against.
   has mysql_install_db => (
     is      => 'ro',
     isa     => File,
@@ -195,7 +202,7 @@ necessary for running the MySQL server instance.
     }
     elsif($self->mysqld)
     {
-      return $self->_run($self->mysqld, '--initialize', '--user=' . $self->user);
+      return $self->_run($self->mysqld, '--initialize', '--user=' . $self->user, '--datadir=' . $self->data );
     }
     else
     {
