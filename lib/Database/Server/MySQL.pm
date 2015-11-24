@@ -246,7 +246,7 @@ Starts the MySQL database instance.
       open(STDIN, '<', '/dev/null');
       open(STDOUT, '>', $fail_dir->file('stdout.txt'));
       open(STDERR, '>', $fail_dir->file('stderr.txt'));
-      system($self->mysqld_safe,
+      my @cmd = ($self->mysqld_safe,
                              '--no-defaults',
                              '--datadir='   . $self->data,
                              '--pid-file='  . $self->pid_file,
@@ -254,11 +254,13 @@ Starts the MySQL database instance.
         $self->port    ?   ( '--port='      . $self->port )         : (),
         $self->socket  ?   ( '--socket='    . $self->socket )       : (),
       );
+      system @cmd;
       if(-d $fail_dir)
       {
         YAML::XS::DumpFile($fail_dir->file('fail.yml'), {
           signal => $? & 128,
           exit   => $? >> 8,
+          cmd    => \@cmd,
         });
       }
       exit;
@@ -274,6 +276,7 @@ Starts the MySQL database instance.
         my $err = $fail_dir->file('stderr.txt')->slurp;
         my $data = YAML::XS::LoadFile($fail_dir->file('fail.yml'));
         # TODO: put this info in the ret object instead
+        say STDERR "[cmd]\n@{ $data->{cmd} }";
         say STDERR "[out]\n$out" if $out;
         say STDERR "[err]\n$err" if $out;
         say STDERR "[exi]\n@{[ $data->{exit} ]}" if $data->{exit};
