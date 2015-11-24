@@ -202,6 +202,12 @@ necessary for running the MySQL server instance.
     }
     elsif($self->mysqld)
     {
+      warn "using untested mysqld --initialize";
+      # NOTE: if yousee this warning:
+      # I am unable to test this as all of the Debian and RedHat based systems that
+      # have available to test against have MySQL prior to 5.7.6.  If you are running
+      # on such a system please drop me a line so that we can colaborate and make
+      # this work (or at least remove the warning if it DOES work).
       return $self->_run($self->mysqld, '--initialize', '--user=' . $self->user, '--datadir=' . $self->data );
     }
     else
