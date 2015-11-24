@@ -39,13 +39,17 @@ subtest 'normal' => sub {
     my $ret = eval { $server->start };
     is $@, '', 'start server did not crash';
 
-    note "[message]\n@{[ $ret->message ]}" if $ret->message;    
+    ok($ret->is_success, 'started database')
+      || diag
+        "=== log_error ===\n",
+        $server->log_error->slurp,
+        "--- log_error ---\n";
 
-    ok $ret->is_success, 'started database';
+    note "[message]\n@{[ $ret->message ]}" if $ret->message;    
   };
 
   is $server->is_up, 1, 'server is up after start';
-  note "pid = ", $server->pid_file->slurp;
+  note "pid = ", (eval { $server->pid_file->slurp } // 'no pid file');
 
   subtest stop => sub {
     plan tests => 2;

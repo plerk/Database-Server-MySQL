@@ -38,8 +38,11 @@ work with MariaDB and other compatible forks.
 
   use Moose;
   use MooseX::Types::Path::Class qw( File Dir );
+  use Path::Class qw( file dir );
   use File::Which qw( which );
   use Carp qw( croak );
+  use File::Temp qw( tempdir );
+  use YAML::XS ();
   use namespace::autoclean;
 
   with 'Database::Server::Role::Server';
@@ -233,30 +236,57 @@ Starts the MySQL database instance.
     
     return $self->_result('server is already running') if $self->is_up;
 
+    my $fail_dir = dir( tempdir( CLEANUP => 0 ) );
+    
     my $pid = fork;
     
     if($pid == 0)
     {
       # TODO: maybe capture this in a place the parent can see it
-      open STDOUT, '>', '/dev/null';
-      open STDERR, '>', '/dev/null';
-      exec($self->mysqld_safe,
+      open(STDIN, '<', '/dev/null');
+      open(STDOUT, '>', $fail_dir->file('stdout.txt'));
+      open(STDERR, '>', $fail_dir->file('stderr.txt'));
+      system($self->mysqld_safe,
+                             '--no-defaults',
                              '--datadir='   . $self->data,
                              '--pid-file='  . $self->pid_file,
         $self->log_error ? ( '--log_error=' . $self->log_error )    : ('--syslog'),
         $self->port    ?   ( '--port='      . $self->port )         : (),
         $self->socket  ?   ( '--socket='    . $self->socket )       : (),
       );
-      exit 2;
+      if(-d $fail_dir)
+      {
+        YAML::XS::DumpFile($fail_dir->file('fail.yml'), {
+          signal => $? & 128,
+          exit   => $? >> 8,
+        });
+      }
+      exit;
     }
     
     while(1..30)
     {
       last if $self->is_up;
+      
+      if(-r $fail_dir->file('fail.yml'))
+      {
+        my $out = $fail_dir->file('stdout.txt')->slurp;
+        my $err = $fail_dir->file('stderr.txt')->slurp;
+        my $data = YAML::XS::LoadFile($fail_dir->file('fail.yml'));
+        # TODO: put this info in the ret object instead
+        say STDERR "[out]\n$out" if $out;
+        say STDERR "[err]\n$err" if $out;
+        say STDERR "[exi]\n@{[ $data->{exit} ]}" if $data->{exit};
+        say STDERR "[sig]\n@{[ $data->{signal} ]}" if $data->{signal};
+        last;
+      }
+      
       sleep 1;
     }
     
-    $self->is_up ? $self->_result('' => 1) : $self->('server did not start');
+    $fail_dir->rmtree(0,1);
+
+    $self->is_up ? $self->_result('' => 1) : $self->_result('server did not start');
   }
   
 =head2 stop
@@ -283,7 +313,7 @@ Stops the MySQL database instance.
       sleep 1;
     }
 
-    !$self->is_up ? $self->_result('' => 1) : $self->('server did not stop');
+    !$self->is_up ? $self->_result('' => 1) : $self->_result('server did not stop');
     
   }
 
@@ -326,7 +356,7 @@ package Database::Server::MySQL::InternalResult {
   sub BUILDARGS
   {
     my($class, $message, $ok) = @_;
-    { ok => $ok // '', message => $message };
+    { ok => $ok // 0, message => $message };
   }
   
   sub is_success
