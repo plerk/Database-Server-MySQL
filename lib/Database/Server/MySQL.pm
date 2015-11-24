@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use 5.020;
+use Database::Server;
 
 package Database::Server::MySQL {
 
@@ -40,6 +41,8 @@ work with MariaDB and other compatible forks.
   use File::Which qw( which );
   use Carp qw( croak );
   use namespace::autoclean;
+
+  with 'Database::Server::Role::Server';
 
   # TODO: my version of Debian comes with a MySQL old
   # enough that you have to use this deprecated
@@ -174,12 +177,6 @@ errors will be sent to syslog.
     coerce   => 1,
   );
   
-  sub _run
-  {
-    my($self, @command) = @_;
-    Database::Server::MySQL::CommandResult->new(@command);
-  }
-
 =head1 METHODS
 
 =head2 create
@@ -198,7 +195,7 @@ necessary for running the MySQL server instance.
     croak "@{[ $self->data ]} is not empty" if $self->data->children;
     if($self->mysql_install_db)
     {
-      return $self->_run($self->mysql_install_db, '--datadir=' . $self->data, '--user=' . $self->user);
+      return $self->run($self->mysql_install_db, '--datadir=' . $self->data, '--user=' . $self->user);
     }
     elsif($self->mysqld)
     {
@@ -208,7 +205,7 @@ necessary for running the MySQL server instance.
       # have available to test against have MySQL prior to 5.7.6.  If you are running
       # on such a system please drop me a line so that we can colaborate and make
       # this work (or at least remove the warning if it DOES work).
-      return $self->_run($self->mysqld, '--initialize', '--user=' . $self->user, '--datadir=' . $self->data );
+      return $self->run($self->mysqld, '--initialize', '--user=' . $self->user, '--datadir=' . $self->data );
     }
     else
     {
@@ -309,21 +306,12 @@ Checks to see if the MySQL database instance is up.
   
 }
 
-package Database::Server::MySQL::Result {
-
-  use Moose::Role;
-  use namespace::autoclean;
-
-  requires 'is_success';
-  
-}
-
 package Database::Server::MySQL::InternalResult {
 
   use Moose;
   use namespace::autoclean;
 
-  with 'Database::Server::MySQL::Result';
+  with 'Database::Server::Role::Result';
   
   has message => (
     is  => 'ro',
@@ -346,59 +334,6 @@ package Database::Server::MySQL::InternalResult {
     shift->ok;
   }  
 
-}
-
-package Database::Server::MySQL::CommandResult {
-
-  use Moose;
-  use Capture::Tiny qw( capture );
-  use Carp qw( croak );
-  use experimental qw( postderef );
-  use namespace::autoclean;
-
-  with 'Database::Server::MySQL::Result';
-
-  sub BUILDARGS
-  {
-    my $class = shift;
-    my %args = ( command => [map { "$_" } @_] );
-    
-    ($args{out}, $args{err}) = capture { system $args{command}->@* };
-    croak "failed to execute @{[ $args{command}->@* ]}: $?" if $? == -1;
-    my $signal = $? & 127;
-    croak "command @{[ $args{command}->@* ]} killed by signal $signal" if $args{signal};
-
-    $args{exit}   = $args{signal} ? 0 : $? >> 8;
-        
-    \%args;
-  }
-
-  has command => (
-    is  => 'ro',
-    isa => 'ArrayRef[Str]',
-  );
-
-  has out => (
-    is  => 'ro',
-    isa => 'Str',
-  );
-
-  has err => (
-    is  => 'ro',
-    isa => 'Str',
-  );
-  
-  has exit => (
-    is  => 'ro',
-    isa => 'Int',
-  );
-  
-  sub is_success
-  {
-    !shift->exit;
-  }
-  
-  __PACKAGE__->meta->make_immutable;
 }
 
 1;
