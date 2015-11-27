@@ -42,7 +42,7 @@ work with MariaDB and other compatible forks.
   use File::Which qw( which );
   use Carp qw( croak );
   use File::Temp qw( tempdir );
-  use YAML::XS ();
+  use JSON::PP ();
   use namespace::autoclean;
 
   with 'Database::Server::Role::Server';
@@ -257,11 +257,12 @@ Starts the MySQL database instance.
       system @cmd;
       if(-d $fail_dir)
       {
-        YAML::XS::DumpFile($fail_dir->file('fail.yml'), {
+        $fail_dir->file('fail.json')->spew(
+          JSON::PP::encode_json({
           signal => $? & 128,
           exit   => $? >> 8,
           cmd    => \@cmd,
-        });
+        }));
       }
       exit;
     }
@@ -270,11 +271,12 @@ Starts the MySQL database instance.
     {
       last if $self->is_up;
       
-      if(-r $fail_dir->file('fail.yml'))
+      my $fail_file = $fail_dir->file('fail.json');
+      if(-r $fail_file)
       {
         my $out = $fail_dir->file('stdout.txt')->slurp;
         my $err = $fail_dir->file('stderr.txt')->slurp;
-        my $data = YAML::XS::LoadFile($fail_dir->file('fail.yml'));
+        my $data = JSON::PP::decode_json($fail_file->slurp);
         # TODO: put this info in the ret object instead
         say STDERR "[cmd]\n@{ $data->{cmd} }";
         say STDERR "[out]\n$out" if $out;
