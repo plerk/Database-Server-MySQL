@@ -5,4 +5,5 @@ Moose
 MooseX::Types::Path::Class
 Path::Class
 Test::More
+YAML::XS
 namespace::autoclean
