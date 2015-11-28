@@ -15,7 +15,7 @@ package Database::Server::MySQL {
    pid_file => '/tmp/mysqlroot/mysql.pid',
  );
  
- $server->create;
+ $server->init;
  $server->start;
  $server->stop;
  
@@ -51,7 +51,7 @@ work with MariaDB and other compatible forks.
   # enough that you have to use this deprecated
   # interface for creating MySQL data files.  This
   # has to be able to handle which() returning new
-  # or L</create> below needs to check the server
+  # or L</init> below needs to check the server
   # version.  First though we need a working modern
   # version of MySQL to test against.
   has mysql_install_db => (
@@ -161,8 +161,9 @@ The path to the UNIX domain socket.
 =cut
 
   has socket => (
-    is => 'ro',
-    isa => File,
+    is     => 'ro',
+    coerce => 1,
+    isa    => File,
   );
 
 =head2 log_error
@@ -182,9 +183,9 @@ errors will be sent to syslog.
   
 =head1 METHODS
 
-=head2 create
+=head2 init
 
- $server->create;
+ $server->init;
 
 Create the MySQL instance.  This involves calling C<mysqld --initalize> or
 C<mysql_install_db> with the appropriate options to produce the data files
@@ -192,7 +193,7 @@ necessary for running the MySQL server instance.
 
 =cut
   
-  sub create
+  sub init
   {
     my($self) = @_;
     croak "@{[ $self->data ]} is not empty" if $self->data->children;
@@ -220,6 +221,44 @@ necessary for running the MySQL server instance.
   {
     shift;
     Database::Server::MySQL::InternalResult->new(@_);
+  }
+
+=head2 create
+
+ my $args = Database::Server::MySQL->create($root);
+
+(class method)
+Create, initialize a MySQL instance, rooted under C<$root>.  Returns
+a hash reference which can be passed into C<new> to reconstitute the
+database instance.  Example:
+
+ my $arg = Database::Server::MySQL->create("/tmp/foo");
+ my $server = Database::Server::MySQL->new(%$arg);
+
+=cut
+
+  sub create
+  {
+    my(undef, $root) = @_;
+    $root = Dir->coerce($root);
+    my $data = $root->subdir( qw( var lib data ) );
+    my $run  = $root->subdir( qw( var run ) );
+    my $log  = $root->file( qw( var log mysql.log) );
+    my $etc  = $root->subdir( qw( etc ) );
+    $_->mkpath(0, 0700) for ($data,$run,$etc,$log->parent);
+    
+    my %arg = (
+      data      => $data->stringify,
+      pid_file  => $run->file('mysql.pid')->stringify,
+      port      => Database::Server->generate_port,
+      socket    => $run->file('mysql.sock')->stringify,
+      log_error => $log->stringify,
+    );
+
+    # TODO: check return value    
+    __PACKAGE__->new(%arg)->init;
+    
+    \%arg;
   }
 
 =head2 start
@@ -267,7 +306,7 @@ Starts the MySQL database instance.
       exit;
     }
     
-    while(1..30)
+    while(1 .. 30)
     {
       last if $self->is_up;
       

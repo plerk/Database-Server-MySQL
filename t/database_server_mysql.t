@@ -19,9 +19,9 @@ subtest 'normal' => sub {
   
   $server->data->mkpath(0,0700);
 
-  subtest create => sub {
+  subtest init => sub {
     plan tests => 2;
-    my $ret = eval { $server->create };
+    my $ret = eval { $server->init };
     is $@, '', 'creating server did not crash';
  
     note "% @{ $ret->command }";
@@ -29,7 +29,7 @@ subtest 'normal' => sub {
     note "[err]\n@{[ $ret->err ]}" if $ret->err ne '';
     note "[exit]@{[ $ret->exit ]}";
   
-    ok $ret->is_success, 'created database';
+    ok $ret->is_success, 'init database';
   };
 
   is $server->is_up, '', 'server is down before start';
@@ -64,7 +64,7 @@ subtest 'normal' => sub {
   is $server->is_up, '', 'server is down after stop';
 };
 
-subtest 'try to create server with existing data directory' => sub {
+subtest 'try to init server with existing data directory' => sub {
   plan tests => 1;
   my $data = dir( tempdir( CLEANUP => 1 ) );
   $data->subdir('data')->mkpath(0,0700);
@@ -78,6 +78,6 @@ subtest 'try to create server with existing data directory' => sub {
     log_error => $data->file('mysql_error.log'),
   );
 
-  eval { $server->create };
+  eval { $server->init };
   like $@, qr{^$data/data is not empty}, 'died with correct exception';
 };
