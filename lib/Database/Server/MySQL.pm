@@ -180,7 +180,36 @@ errors will be sent to syslog.
     isa      => File,
     coerce   => 1,
   );
-  
+
+=head2 skip_grant_tables
+
+ my $bool = $server->skip_grant_tables;
+
+Start without grant tables.  This gives all users FULL
+ACCESSS to all tables.
+
+=cut
+
+  has skip_grant_tables => (
+    is      => 'ro',
+    isa     => 'Int',
+    default => 0,
+  );
+
+=head2 skip_networking
+
+ my $bool = $server->skip_networking;
+
+Don't allow connection with TCP/IP.
+
+=cut
+
+  has skip_networking => (
+    is      => 'ro',
+    isa     => 'Int',
+    default => 0,
+  );
+
 =head1 METHODS
 
 =head2 init
@@ -248,11 +277,13 @@ database instance.  Example:
     $_->mkpath(0, 0700) for ($data,$run,$etc,$log->parent);
     
     my %arg = (
-      data      => $data->stringify,
-      pid_file  => $run->file('mysql.pid')->stringify,
-      port      => Database::Server->generate_port,
-      socket    => $run->file('mysql.sock')->stringify,
-      log_error => $log->stringify,
+      data              => $data->stringify,
+      pid_file          => $run->file('mysql.pid')->stringify,
+      #port             => Database::Server->generate_port,
+      socket            => $run->file('mysql.sock')->stringify,
+      log_error         => $log->stringify,
+      skip_grant_tables => 1,
+      skip_networking   => 1,
     );
 
     # TODO: check return value    
@@ -292,6 +323,9 @@ Starts the MySQL database instance.
         $self->log_error ? ( '--log_error=' . $self->log_error )    : ('--syslog'),
         $self->port    ?   ( '--port='      . $self->port )         : (),
         $self->socket  ?   ( '--socket='    . $self->socket )       : (),
+        
+        $self->skip_grant_tables ? ( '--skip-grant-tables' ) : (),
+        $self->skip_networking ?   ( '--skip-networking'   ) : (),
       );
       system @cmd;
       if(-d $fail_dir)
@@ -306,7 +340,7 @@ Starts the MySQL database instance.
       exit;
     }
     
-    while(1 .. 30)
+    for(1..30)
     {
       last if $self->is_up;
       
@@ -351,7 +385,7 @@ Stops the MySQL database instance.
     chomp $pid;
     kill 'TERM', $pid;
     
-    while(1..30)
+    for(1..30)
     {
       last unless $self->is_up;
       sleep 1;

@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+  - Added skip_grant_tables attribute
+  - Added skip_networking attribute
 
 0.01      2015-11-27 18:09:07 +0000
   - initial version
