@@ -43,6 +43,7 @@ work with MariaDB and other compatible forks.
   use Carp qw( croak );
   use File::Temp qw( tempdir );
   use JSON::PP ();
+  use PerlX::Maybe qw( maybe provided );
   use namespace::autoclean;
 
   with 'Database::Server::Role::Server';
@@ -210,6 +211,22 @@ Don't allow connection with TCP/IP.
     default => 0,
   );
 
+=head2 mylogin_cnf
+
+ my $file = $server->mylogin_cnf;
+
+Location of the C<.mylogin.conf> file which contains the login details for
+connecting to the server.  This file will be generated when the any of
+the L</init>, L</start> or L</restart> methods are called.
+
+=cut
+
+  has mylogin_cnf => (
+    is     => 'ro',
+    isa    => File,
+    coerce => 1,
+  );
+
 =head1 METHODS
 
 =head2 init
@@ -226,6 +243,9 @@ necessary for running the MySQL server instance.
   {
     my($self) = @_;
     croak "@{[ $self->data ]} is not empty" if $self->data->children;
+    
+    $self->_update_mylogin_cnf;
+    
     if($self->mysql_install_db)
     {
       return $self->run($self->mysql_install_db, '--datadir=' . $self->data, '--user=' . $self->user);
@@ -244,6 +264,23 @@ necessary for running the MySQL server instance.
     {
       croak "unable to find either mysqld_install_db or mysqld"
     }
+  }
+  
+  sub _update_mylogin_cnf
+  {
+    my($self) = @_;
+    return unless $self->mylogin_cnf;
+    
+    require Config::INI::Writer;
+    
+    Config::INI::Writer->write_file([
+      '_' => [],
+      client => {
+        maybe port   => $self->port,
+        maybe socket => $self->socket,
+        provided !$self->skip_networking, host => '127.0.0.1',
+      },
+    ], $self->mylogin_cnf);
   }
   
   sub _result
@@ -284,6 +321,7 @@ database instance.  Example:
       log_error         => $log->stringify,
       skip_grant_tables => 1,
       skip_networking   => 1,
+      mylogin_cnf       => $etc->file('mylogin.cnf')->stringify,
     );
 
     # TODO: check return value    
@@ -304,6 +342,8 @@ Starts the MySQL database instance.
   {
     my($self) = @_;
     
+    $self->_update_mylogin_cnf;
+
     return $self->_result('server is already running') if $self->is_up;
 
     my $fail_dir = dir( tempdir( CLEANUP => 0 ) );
@@ -411,7 +451,36 @@ Checks to see if the MySQL database instance is up.
     chomp $pid;
     !!-e "/proc/$pid";
   }
-  
+
+#=head2 env
+#
+# my %env = $server->env;
+#
+#Returns a hash of the environment variables needed to connect to the
+#MySQL instance with the native tools (for example C<psql>).  Usually
+#this includes the correct value for C<MYSQL_TEST_LOGIN_FILE>, which
+#corresponds to the C<.mylogin.cnf> file generated when the database
+#was started.  This method requires that the L</mylogin_cnf> attribute
+#has been provided when the server object was created.
+#
+#=cut
+#
+#  sub env
+#  {
+#    my($self) = @_;
+#    
+#    croak "\$server->env for Database::Server::MySQL requires mylogin_cnf"
+#      unless  $self->mylogin_cnf;
+#    
+#    my %env = (
+#      MYSQL_TEST_LOGIN_FILE => $self->mylogin_cnf->stringify,
+#    );
+#
+#    %env;
+#  }
+
+  before 'restart' => sub { shift->_update_mylogin_cnf };
+
 }
 
 package Database::Server::MySQL::InternalResult {

@@ -5,15 +5,20 @@ use Database::Server::MySQL;
 use File::Temp qw( tempdir );
 use Path::Class qw( dir );
 use IO::Socket::IP;
+use Config::INI::Reader;
 
 subtest 'normal' => sub {
+
+  plan tests => 9;
+
   my $data = dir( tempdir( CLEANUP => 1 ) );
   my $server  = Database::Server::MySQL->new(
-    data      => $data->subdir('data'),
-    pid_file  => $data->file('mysql.pid'),
-    port      => IO::Socket::IP->new(Listen => 5, LocalAddr => '127.0.0.1')->sockport,
-    socket    => $data->file('mysql.sock'),
-    log_error => $data->file('mysql_error.log'),
+    data        => $data->subdir('data'),
+    pid_file    => $data->file('mysql.pid'),
+    port        => IO::Socket::IP->new(Listen => 5, LocalAddr => '127.0.0.1')->sockport,
+    socket      => $data->file('mysql.sock'),
+    log_error   => $data->file('mysql_error.log'),
+    mylogin_cnf => $data->file('mylogin.cnf'),
   );
   isa_ok $server, 'Database::Server::MySQL';
   
@@ -31,6 +36,26 @@ subtest 'normal' => sub {
   
     ok $ret->is_success, 'init database';
   };
+
+  subtest myloging_cnf => sub {
+    plan tests => 5;
+    ok -r $server->mylogin_cnf, 'created mylogin_cnf';
+    my $config = eval { Config::INI::Reader->read_file($server->mylogin_cnf) };
+    is $@, '', 'no error on read';
+    
+    is $config->{client}->{port},   $server->port,   'port matches';
+    is $config->{client}->{socket}, $server->socket, 'socket matches';
+    # TODO support binding to particular IP
+    is $config->{client}->{host},   '127.0.0.1',     'host matches';
+  };
+  
+  # This isn't workable since MYSQL_TEST_LOGIN_FILE is not supported
+  # by MariaDB
+  #subtest env => sub {
+  #  plan tests => 1;
+  #  my %env = $server->env;
+  #  is $env{MYSQL_TEST_LOGIN_FILE}, "@{[ $data->file('mylogin.cnf') ]}", "MYSQL_TEST_LOGIN_FILE";
+  #};
 
   is $server->is_up, '', 'server is down before start';
   
