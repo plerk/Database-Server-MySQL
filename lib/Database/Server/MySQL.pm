@@ -283,12 +283,6 @@ necessary for running the MySQL server instance.
     ], $self->mylogin_cnf);
   }
   
-  sub _result
-  {
-    shift;
-    Database::Server::MySQL::InternalResult->new(@_);
-  }
-
 =head2 create
 
  my $args = Database::Server::MySQL->create($root);
@@ -344,7 +338,7 @@ Starts the MySQL database instance.
     
     $self->_update_mylogin_cnf;
 
-    return $self->_result('server is already running') if $self->is_up;
+    return $self->fail('server is already running') if $self->is_up;
 
     $self->runnb($self->mysqld_safe,
                            '--no-defaults',
@@ -371,7 +365,7 @@ Stops the MySQL database instance.
   {
     my($self) = @_;
 
-    return $self->_result('server is not running') unless $self->is_up;
+    return $self->fail('server is not running') unless $self->is_up;
     
     my $pid = $self->pid_file->slurp;
     chomp $pid;
@@ -383,7 +377,7 @@ Stops the MySQL database instance.
       sleep 1;
     }
 
-    !$self->is_up ? $self->_result('' => 1) : $self->_result('server did not stop');
+    !$self->is_up ? $self->good : $self->fail('server did not stop');
     
   }
 
@@ -432,34 +426,6 @@ Checks to see if the MySQL database instance is up.
 #  }
 
   before 'restart' => sub { shift->_update_mylogin_cnf };
-
-}
-
-package Database::Server::MySQL::InternalResult {
-
-  use Moose;
-  use namespace::autoclean;
-
-  with 'Database::Server::Role::Result';
-  
-  has message => (
-    is  => 'ro',
-    isa => 'Str',
-  );
-  
-  has ok => (
-    is  => 'ro',
-    isa => 'Int',
-  );
-
-  sub BUILDARGS
-  {
-    my($class, $message, $ok) = @_;
-    { ok => $ok // 0, message => $message };
-  }
-  
-  sub is_success { shift->ok }
-  sub as_string { shift->message }
 
 }
 
