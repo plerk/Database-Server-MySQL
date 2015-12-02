@@ -9,7 +9,7 @@ use Config::INI::Reader;
 
 subtest 'normal' => sub {
 
-  plan tests => 9;
+  plan tests => 8;
 
   my $data = dir( tempdir( CLEANUP => 1 ) );
   my $server  = Database::Server::MySQL->new(
@@ -70,7 +70,10 @@ subtest 'normal' => sub {
         $server->log_error->slurp,
         "--- log_error ---\n";
 
-    note "[message]\n@{[ $ret->message ]}" if $ret->message;    
+    note "[out]\n@{[ $ret->out ]}" if $ret->out ne '';
+    note "[err]\n@{[ $ret->err ]}" if $ret->err ne '';
+    note "[exit]@{[ $ret->exit ]}";
+
   };
 
   is $server->is_up, 1, 'server is up after start';

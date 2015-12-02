@@ -346,65 +346,17 @@ Starts the MySQL database instance.
 
     return $self->_result('server is already running') if $self->is_up;
 
-    my $fail_dir = dir( tempdir( CLEANUP => 0 ) );
-    
-    my $pid = fork;
-    
-    if($pid == 0)
-    {
-      # TODO: maybe capture this in a place the parent can see it
-      open(STDIN, '<', '/dev/null');
-      open(STDOUT, '>', $fail_dir->file('stdout.txt'));
-      open(STDERR, '>', $fail_dir->file('stderr.txt'));
-      my @cmd = ($self->mysqld_safe,
-                             '--no-defaults',
-                             '--datadir='   . $self->data,
-                             '--pid-file='  . $self->pid_file,
-        $self->log_error ? ( '--log_error=' . $self->log_error )    : ('--syslog'),
-        $self->port    ?   ( '--port='      . $self->port )         : (),
-        $self->socket  ?   ( '--socket='    . $self->socket )       : (),
+    $self->runnb($self->mysqld_safe,
+                           '--no-defaults',
+                           '--datadir='   . $self->data,
+                           '--pid-file='  . $self->pid_file,
+      $self->log_error ? ( '--log_error=' . $self->log_error )    : ('--syslog'),
+      $self->port    ?   ( '--port='      . $self->port )         : (),
+      $self->socket  ?   ( '--socket='    . $self->socket )       : (),
         
-        $self->skip_grant_tables ? ( '--skip-grant-tables' ) : (),
-        $self->skip_networking ?   ( '--skip-networking'   ) : (),
-      );
-      system @cmd;
-      if(-d $fail_dir)
-      {
-        $fail_dir->file('fail.json')->spew(
-          JSON::PP::encode_json({
-          signal => $? & 128,
-          exit   => $? >> 8,
-          cmd    => \@cmd,
-        }));
-      }
-      exit;
-    }
-    
-    for(1..30)
-    {
-      last if $self->is_up;
-      
-      my $fail_file = $fail_dir->file('fail.json');
-      if(-r $fail_file)
-      {
-        my $out = $fail_dir->file('stdout.txt')->slurp;
-        my $err = $fail_dir->file('stderr.txt')->slurp;
-        my $data = JSON::PP::decode_json($fail_file->slurp);
-        # TODO: put this info in the ret object instead
-        say STDERR "[cmd]\n@{ $data->{cmd} }";
-        say STDERR "[out]\n$out" if $out;
-        say STDERR "[err]\n$err" if $out;
-        say STDERR "[exi]\n@{[ $data->{exit} ]}" if $data->{exit};
-        say STDERR "[sig]\n@{[ $data->{signal} ]}" if $data->{signal};
-        last;
-      }
-      
-      sleep 1;
-    }
-    
-    $fail_dir->rmtree(0,1);
-
-    $self->is_up ? $self->_result('' => 1) : $self->_result('server did not start');
+      $self->skip_grant_tables ? ( '--skip-grant-tables' ) : (),
+      $self->skip_networking ?   ( '--skip-networking'   ) : (),
+    );
   }
   
 =head2 stop
@@ -506,10 +458,8 @@ package Database::Server::MySQL::InternalResult {
     { ok => $ok // 0, message => $message };
   }
   
-  sub is_success
-  {
-    shift->ok;
-  }  
+  sub is_success { shift->ok }
+  sub as_string { shift->message }
 
 }
 
