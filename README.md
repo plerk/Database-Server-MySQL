@@ -10,7 +10,7 @@ Interface for MySQL server instance
       pid_file => '/tmp/mysqlroot/mysql.pid',
     );
     
-    $server->create;
+    $server->init;
     $server->start;
     $server->stop;
     
@@ -71,15 +71,48 @@ The path to the UNIX domain socket.
 The error log file path.  If not provided then
 errors will be sent to syslog.
 
+## skip\_grant\_tables
+
+    my $bool = $server->skip_grant_tables;
+
+Start without grant tables.  This gives all users FULL
+ACCESSS to all tables.
+
+## skip\_networking
+
+    my $bool = $server->skip_networking;
+
+Don't allow connection with TCP/IP.
+
+## mylogin\_cnf
+
+    my $file = $server->mylogin_cnf;
+
+Location of the `.mylogin.conf` file which contains the login details for
+connecting to the server.  This file will be generated when the any of
+the ["init"](#init), ["start"](#start) or ["restart"](#restart) methods are called.
+
 # METHODS
 
-## create
+## init
 
-    $server->create;
+    $server->init;
 
 Create the MySQL instance.  This involves calling `mysqld --initalize` or
 `mysql_install_db` with the appropriate options to produce the data files
 necessary for running the MySQL server instance.
+
+## create
+
+    my $args = Database::Server::MySQL->create($root);
+
+(class method)
+Create, initialize a MySQL instance, rooted under `$root`.  Returns
+a hash reference which can be passed into `new` to reconstitute the
+database instance.  Example:
+
+    my $arg = Database::Server::MySQL->create("/tmp/foo");
+    my $server = Database::Server::MySQL->new(%$arg);
 
 ## start
 
