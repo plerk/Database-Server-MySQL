@@ -1,4 +1,4 @@
-# Database::Server::MySQL
+# Database::Server::MySQL [![Build Status](https://secure.travis-ci.org/plicease/Database-Server-MySQL.png)](http://travis-ci.org/plicease/Database-Server-MySQL)
 
 Interface for MySQL server instance
 
