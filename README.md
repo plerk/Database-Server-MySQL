@@ -76,7 +76,7 @@ errors will be sent to syslog.
     my $bool = $server->skip_grant_tables;
 
 Start without grant tables.  This gives all users FULL
-ACCESSS to all tables.
+ACCESS to all tables.
 
 ## skip\_networking
 
