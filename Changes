@@ -1,6 +1,9 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.02      2015-12-09 20:33:38 -0500
+  - Updated interface to support Database::Server 0.02
   - Added skip_grant_tables attribute
   - Added skip_networking attribute
 
