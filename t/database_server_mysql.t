@@ -9,7 +9,7 @@ use Config::INI::Reader;
 
 subtest 'normal' => sub {
 
-  plan tests => 9;
+  plan tests => 10;
 
   my $data = dir( tempdir( CLEANUP => 1 ) );
   my $server  = Database::Server::MySQL->new(
@@ -99,6 +99,45 @@ subtest 'normal' => sub {
     
     %list = map { $_ => 1 } eval { $server->list_databases };
     ok !$list{foo}, 'database foo does not exist';
+  
+  };
+
+  subtest 'shell/dsn' => sub {
+  
+    plan tests => 2;
+  
+    my $dbname = 'foo1';
+    eval { $server->create_database($dbname) };
+    diag $@ if $@;
+    my $sql = q{
+      CREATE TABLE bar (baz VARCHAR(900));
+      INSERT INTO bar VALUES ('hi there');
+    };
+  
+    my $ret = eval { $server->shell($dbname, $sql, []) };
+    is $@, '', 'server.shell';
+
+    note "[out]\n@{[ $ret->out ]}" if $ret->out ne '';
+    note "[err]\n@{[ $ret->err ]}" if $ret->err ne '';
+    note "[exit]@{[ $ret->exit ]}";
+
+    foreach my $driver (qw( mysql ))
+    {
+      subtest "DBD::$driver" => sub {
+        plan skip_all => "test requires DBD::$driver" unless eval qq{ use DBI; use DBD::$driver; 1 };
+        plan tests => 2;
+        my $dsn = eval { $server->dsn($driver, $dbname) };
+        is $@, '', "server.dsn($driver, $dbname)";
+        note "dsn=$dsn";
+        my $value = eval {
+          my $dbh = DBI->connect($dsn, '', '', { RaiseError => 1, AutoCommit => 1 });
+          my $sth = $dbh->prepare(q{ SELECT baz FROM bar });
+          $sth->execute;
+          $sth->fetchrow_hashref->{baz};
+        };
+        is $value, 'hi there', 'query good';
+      };
+    }
   
   };
 

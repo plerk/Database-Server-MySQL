@@ -441,14 +441,29 @@ Checks to see if the MySQL database instance is up.
   
   sub interactive_shell
   {
+    my($self, $dbname) = @_;
+    $self->run($self->mysql, $self->_shell_args, $dbname ? ($dbname) : ());
+    $self;
   }
   
   sub shell
   {
+    my($self, $dbname, $sql, $options) = @_;
+    $options //= [];
+    $self->run($self->mysql, $self->_shell_args, @$options, $dbname ? ($dbname) : (), -e => $sql);
   }
   
   sub dsn
   {
+    my($self, $driver, $dbname) = @_;
+    $dbname //= 'mysql';
+    $driver //= 'mysql';
+    $driver =~ s/^DBD:://;
+    # DBD::mysql doesn't support mysq_socket.
+    croak "Do not know how to generate DNS for DBD::$driver" unless $driver eq 'mysql';
+    $self->socket
+      ? "DBI:mysql:database=$dbname;mysql_socket=@{[ $self->socket ]}"
+      : "DBI:mysql:database=$dbname;host=127.0.0.1;port=@{[ $self->port ]}";
   }
   
 
