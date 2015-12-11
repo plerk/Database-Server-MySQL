@@ -414,6 +414,14 @@ Checks to see if the MySQL database instance is up.
     ('--no-defaults', $self->socket ? ('--socket' => $self->socket) : ('--port' => $self->port, '--host' => '127.0.0.1'));
   }
 
+=head2 list_databases
+
+ my @names = $server->list_databases;
+ 
+Returns a list of the databases on the MySQL instance.
+
+=cut
+
   sub list_databases
   {
     my($self) = @_;
@@ -423,6 +431,14 @@ Checks to see if the MySQL database instance is up.
     @list;
   }
 
+=head2 create_database
+
+ $server->create_database($dbname);
+
+Create a new database with the given name.
+
+=cut
+
   sub create_database
   {
     my($self, $dbname) = @_;
@@ -431,6 +447,14 @@ Checks to see if the MySQL database instance is up.
     $self;
   }
   
+=head2 drop_database
+
+ $server->drop_database($dbname);
+
+Drop database with the given name.
+
+=cut
+
   sub drop_database
   {
     my($self, $dbname) = @_;
@@ -439,12 +463,45 @@ Checks to see if the MySQL database instance is up.
     $self;
   }
   
+=head2 interactive_shell
+
+ $server->interactive_shell($dbname);
+ $server->interactive_shell;
+
+Connect to the database using an interactive shell.
+
+=cut
+
   sub interactive_shell
   {
     my($self, $dbname) = @_;
     $self->run($self->mysql, $self->_shell_args, $dbname ? ($dbname) : ());
     $self;
   }
+
+=head2 shell
+
+ $server->shell($dbname, $sql, \@options);
+
+Connect to the database using a non-interactive shell.
+
+=over 4
+
+=item C<$dbname>
+
+The name of the database
+
+=item C<$sql>
+
+The SQL to execute.
+
+=item C<\@options>
+
+The C<mysql> options to use.
+
+=back
+
+=cut
   
   sub shell
   {
@@ -452,7 +509,17 @@ Checks to see if the MySQL database instance is up.
     $options //= [];
     $self->run($self->mysql, $self->_shell_args, @$options, $dbname ? ($dbname) : (), -e => $sql);
   }
-  
+
+=head2 dsn
+
+ my $dsn = $server->dsn($driver, $dbname);
+ my $dsn = $server->dsn($driver);
+ my $dsn = $server->dsn;
+
+Provide a DSN that can be fed into DBI to connect to the database using L<DBI>.  These drivers are supported: L<DBD::Pg>, L<DBD::PgPP>, L<DBD::PgPPSjis>.
+
+=cut
+
   sub dsn
   {
     my($self, $driver, $dbname) = @_;

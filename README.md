@@ -132,6 +132,57 @@ Stops the MySQL database instance.
 
 Checks to see if the MySQL database instance is up.
 
+## list\_databases
+
+    my @names = $server->list_databases;
+
+Returns a list of the databases on the MySQL instance.
+
+## create\_database
+
+    $server->create_database($dbname);
+
+Create a new database with the given name.
+
+## drop\_database
+
+    $server->drop_database($dbname);
+
+Drop database with the given name.
+
+## interactive\_shell
+
+    $server->interactive_shell($dbname);
+    $server->interactive_shell;
+
+Connect to the database using an interactive shell.
+
+## shell
+
+    $server->shell($dbname, $sql, \@options);
+
+Connect to the database using a non-interactive shell.
+
+- `$dbname`
+
+    The name of the database
+
+- `$sql`
+
+    The SQL to execute.
+
+- `\@options`
+
+    The `mysql` options to use.
+
+## dsn
+
+    my $dsn = $server->dsn($driver, $dbname);
+    my $dsn = $server->dsn($driver);
+    my $dsn = $server->dsn;
+
+Provide a DSN that can be fed into DBI to connect to the database using [DBI](https://metacpan.org/pod/DBI).  These drivers are supported: [DBD::Pg](https://metacpan.org/pod/DBD::Pg), [DBD::PgPP](https://metacpan.org/pod/DBD::PgPP), [DBD::PgPPSjis](https://metacpan.org/pod/DBD::PgPPSjis).
+
 # AUTHOR
 
 Graham Ollis &lt;plicease@cpan.org>
