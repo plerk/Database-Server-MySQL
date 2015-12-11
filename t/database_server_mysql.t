@@ -19,6 +19,8 @@ subtest 'normal' => sub {
     socket      => $data->file('mysql.sock'),
     log_error   => $data->file('mysql_error.log'),
     mylogin_cnf => $data->file('mylogin.cnf'),
+    skip_grant_tables => 1,
+    #skip_networking   => 1,
   );
   isa_ok $server, 'Database::Server::MySQL';
   

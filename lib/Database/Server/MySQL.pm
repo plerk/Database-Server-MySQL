@@ -408,10 +408,16 @@ Checks to see if the MySQL database instance is up.
     !!-e "/proc/$pid";
   }
 
+  sub _shell_args
+  {
+    my($self) = @_;
+    ('--no-defaults', $self->socket ? ('--socket' => $self->socket) : ('--port' => $self->port, '--host' => '127.0.0.1'));
+  }
+
   sub list_databases
   {
     my($self) = @_;
-    my $ret = $self->run($self->mysql, '-B', -e => 'show databases');
+    my $ret = $self->run($self->mysql, $self->_shell_args, '-B', -e => 'show databases');
     my @list = split /\n/, $ret->out;
     shift @list;
     @list;
@@ -421,7 +427,7 @@ Checks to see if the MySQL database instance is up.
   {
     my($self, $dbname) = @_;
     croak "no database name provided" unless $dbname;
-    $self->run($self->mysql, -e => "CREATE DATABASE $dbname");
+    $self->run($self->mysql, $self->_shell_args, -e => "CREATE DATABASE $dbname");
     $self;
   }
   
@@ -429,7 +435,7 @@ Checks to see if the MySQL database instance is up.
   {
     my($self, $dbname) = @_;
     croak "no database name provided" unless $dbname;
-    $self->run($self->mysql, -e => "DROP DATABASE $dbname");
+    $self->run($self->mysql, $self->_shell_args, -e => "DROP DATABASE $dbname");
     $self;
   }
   
