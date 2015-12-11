@@ -41,6 +41,7 @@ work with MariaDB and other compatible forks.
   use Path::Class qw( file dir );
   use File::Which qw( which );
   use Carp qw( croak );
+  use File::Temp qw( tempfile );
   use File::Temp qw( tempdir );
   use JSON::PP ();
   use PerlX::Maybe qw( maybe provided );
@@ -507,7 +508,14 @@ The C<mysql> options to use.
   {
     my($self, $dbname, $sql, $options) = @_;
     $options //= [];
-    $self->run($self->mysql, $self->_shell_args, @$options, $dbname ? ($dbname) : (), -e => $sql);
+    my($fh, $filename) = tempfile("mysqlXXXX", SUFFIX => '.sql');
+    print $fh $sql;
+    close $fh;
+    open STDIN, '<', $filename;
+    my $ret = $self->run($self->mysql, $self->_shell_args, @$options, $dbname ? ($dbname) : ());
+    open STDIN, '<', '/dev/null';
+    unlink $filename;
+    $ret;
   }
 
 =head2 dsn
