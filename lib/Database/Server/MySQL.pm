@@ -78,6 +78,16 @@ work with MariaDB and other compatible forks.
     },
   );
 
+  has mysql => (
+    is      => 'ro',
+    isa     => File,
+    lazy    => 1,
+    coerce  => 1,
+    default => sub {
+      scalar which('mysql');
+    },
+  );
+
   has mysqld_safe => (
     is      => 'ro',
     isa     => File,
@@ -397,6 +407,46 @@ Checks to see if the MySQL database instance is up.
     chomp $pid;
     !!-e "/proc/$pid";
   }
+
+  sub list_databases
+  {
+    my($self) = @_;
+    my $ret = $self->run($self->mysql, '-B', -e => 'show databases');
+    my @list = split /\n/, $ret->out;
+    shift @list;
+    @list;
+  }
+
+  sub create_database
+  {
+    my($self, $dbname) = @_;
+    croak "no database name provided" unless $dbname;
+    $self->run($self->mysql, -e => "CREATE DATABASE $dbname");
+    $self;
+  }
+  
+  sub drop_database
+  {
+    my($self, $dbname) = @_;
+    croak "no database name provided" unless $dbname;
+    $self->run($self->mysql, -e => "DROP DATABASE $dbname");
+    $self;
+  }
+  
+  sub interactive_shell
+  {
+  }
+  
+  sub shell
+  {
+  }
+  
+  sub dsn
+  {
+  }
+  
+
+#create_database', 'drop_database', 'dsn', 'interactive_shell', 'list_databases', and 'shell'
 
 #=head2 env
 #

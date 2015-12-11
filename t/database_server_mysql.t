@@ -9,7 +9,7 @@ use Config::INI::Reader;
 
 subtest 'normal' => sub {
 
-  plan tests => 8;
+  plan tests => 9;
 
   my $data = dir( tempdir( CLEANUP => 1 ) );
   my $server  = Database::Server::MySQL->new(
@@ -78,6 +78,27 @@ subtest 'normal' => sub {
 
   is $server->is_up, 1, 'server is up after start';
   note "pid = ", (eval { $server->pid_file->slurp } // 'no pid file');
+
+  subtest 'create/drop/list' => sub {
+    plan tests => 5;
+  
+    eval { $server->create_database('foo') };
+    is $@, '', 'server.create_database';
+    
+    my %list = map { $_ => 1 } eval { $server->list_databases };
+    is $@, '', 'server.list_databases';
+    ok $list{foo}, 'database foo exists';
+    
+    note "databases:";
+    note "  $_" for keys %list;
+    
+    eval { $server->drop_database('foo') };
+    is $@, '', 'server.drop_database';
+    
+    %list = map { $_ => 1 } eval { $server->list_databases };
+    ok !$list{foo}, 'database foo does not exist';
+  
+  };
 
   subtest stop => sub {
     plan tests => 2;
