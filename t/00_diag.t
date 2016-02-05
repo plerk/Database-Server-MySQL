@@ -21,6 +21,7 @@ $modules{$_} = $_ for qw(
   Path::Class
   PerlX::Maybe
   PerlX::Maybe::XS
+  Ref::Util
   Test::More
   namespace::autoclean
 );
