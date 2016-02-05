@@ -45,6 +45,7 @@ work with MariaDB and other compatible forks.
   use File::Temp qw( tempdir );
   use JSON::PP ();
   use PerlX::Maybe qw( maybe provided );
+  use Ref::Util qw( is_arrayref is_scalarref is_ref );
   use namespace::autoclean;
 
   with 'Database::Server::Role::Server';
@@ -96,6 +97,16 @@ work with MariaDB and other compatible forks.
     coerce  => 1,
     default => sub {
       scalar which('mysqld_safe') // croak "unable to find mysqld_safe";
+    },
+  );
+  
+  has mysqldump => (
+    is => 'ro',
+    isa => File,
+    lazy => 1,
+    coerce => 1,
+    default => sub {
+      scalar which('mysqldump') // croak "unable to find mysqldump";
     },
   );
 
@@ -541,7 +552,66 @@ Provide a DSN that can be fed into DBI to connect to the database using L<DBI>. 
       ? "DBI:mysql:database=$dbname;mysql_socket=@{[ $self->socket ]}"
       : "DBI:mysql:database=$dbname;host=127.0.0.1;port=@{[ $self->port ]}";
   }
-  
+
+=head2 dump
+
+ $server->dump($dbname => $dest, %options);
+ $server->dump($dbname => $dest, %options, \@native_options);
+
+Dump data and/or schema from the given database.  If C<$dbname> is C<undef>
+then the C<mysql> database will be used.  C<$dest> may be either
+a filename, in which case the dump will be written to that file, or a
+scalar reference, in which case the dump will be written to that scalar.
+Native C<pg_dump> options can be specified using C<@native_options>.
+Supported L<Database::Server> options include:
+
+=over 4
+
+=item data
+
+Include data in the dump.  Off by default.
+
+=item schema
+
+Include schema in the dump.  On by default.
+
+=item access
+
+Include access controls in the dump.  Off by default.
+Not currently supported.
+
+=back
+
+=cut
+
+  sub dump
+  {
+    my @options = is_arrayref($_[-1]) ? @{ pop() } : ();
+    my($self, $dbname, $dest, %options) = @_;
+    $dbname //= 'mysql';
+    
+    push @options, -r => $dest unless is_ref $dest;
+    
+    $options{data}   //= 0;
+    $options{schema} //= 1;
+    $options{access} //= 0;
+    
+    croak "dumping access is not supported (yet)"
+      if $options{access};
+   
+    unshift @options, grep { $_ ne '--no-defaults' } $self->_shell_args;
+    unshift @options, '-d' unless $options{data};
+    unshift @options, qw( -t --skip-triggers -n ) unless $options{schema};
+    
+    my $ret = $self->run($self->mysqldump, $dbname, @options);
+    
+    die "dump failed: @{[ $ret->err ]}" unless $ret->is_success;
+    
+    $$dest = $ret->out if is_scalarref $dest;
+    
+    $self;
+    
+  }  
 
 #create_database', 'drop_database', 'dsn', 'interactive_shell', 'list_databases', and 'shell'
 
