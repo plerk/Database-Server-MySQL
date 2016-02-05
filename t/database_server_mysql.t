@@ -9,7 +9,7 @@ use Config::INI::Reader;
 
 subtest 'normal' => sub {
 
-  plan tests => 10;
+  plan tests => 11;
 
   my $data = dir( tempdir( CLEANUP => 1 ) );
   my $server  = Database::Server::MySQL->new(
