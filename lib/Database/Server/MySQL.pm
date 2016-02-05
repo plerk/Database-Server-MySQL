@@ -476,7 +476,7 @@ Connect to the database using an interactive shell.
   sub interactive_shell
   {
     my($self, $dbname, %args) = @_;
-    my @args = $self->mysql, $self->_shell_args, $dbname ? ($dbname) : ();
+    my @args = ($self->mysql, $self->_shell_args, $dbname ? ($dbname) : ());
     $args{exec} ? exec @args : $self->run(@args);
     $self;
   }
