@@ -492,9 +492,9 @@ Connect to the database using an interactive shell.
     $self;
   }
 
-=head2 shell
+=head2 load
 
- $server->shell($dbname, $sql, \@options);
+ $server->load($dbname, $sql, \@options);
 
 Connect to the database using a non-interactive shell.
 
@@ -516,7 +516,7 @@ The C<mysql> options to use.
 
 =cut
   
-  sub shell
+  sub load
   {
     my($self, $dbname, $sql, $options) = @_;
     $options //= [];
@@ -613,7 +613,7 @@ Not currently supported.
     
   }  
 
-#create_database', 'drop_database', 'dsn', 'interactive_shell', 'list_databases', and 'shell'
+#create_database', 'drop_database', 'dsn', 'interactive_shell', 'list_databases', and 'load'
 
 #=head2 env
 #
